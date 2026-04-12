@@ -49,72 +49,8 @@ The system is intentionally designed with a **1 WCU DynamoDB table** to demonstr
 
 ## 🏗 Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CLIENT REQUESTS                               │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │
-                                ▼
-                    ┌───────────────────────┐
-                    │   API Gateway REST    │
-                    │   autoops-api-dev     │
-                    │  GET  /health         │
-                    │  GET  /items          │
-                    │  POST /items          │
-                    │  GET  /items/{id}     │
-                    │  DELETE /items/{id}   │
-                    │  POST /simulate-error │
-                    └──────────┬────────────┘
-                               │
-                               ▼
-                    ┌───────────────────────┐
-                    │  Lambda Function      │
-                    │  autoops-api-dev      │
-                    │  Python 3.12 / 256MB  │
-                    │  X-Ray Tracing ON     │
-                    └──────────┬────────────┘
-                               │
-                               ▼
-                    ┌───────────────────────┐
-                    │  DynamoDB             │
-                    │  autoops-items-dev    │
-                    │  1 WCU (intentional)  │
-                    │  PK: id (String)      │
-                    └───────────────────────┘
+![Architecture Diagram]()
 
-━━━━━━━━━━━━━━━━━━━━━ MONITORING & ALERTING ━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    CloudWatch Alarms (6)
-         │
-         ├──► SNS Topic: autoops-alarms-dev
-         │         ├──► Email → naveen6662005@gmail.com
-         │         └──► AWS Chatbot → Slack #aws-incidents
-         │
-         └──► EventBridge Rule (ALARM state only)
-                   │
-                   ▼
-         Lambda: autoops-devops-agent-webhook-dev
-                   │
-                   ├── Secrets Manager (HMAC credentials)
-                   ├── Format + Sign payload
-                   └──► DevOps Agent Webhook
-                              │
-                              ▼
-                   Agent Space: autoops-incident-intelligence
-                              │
-                    ┌─────────┴──────────┐
-                    │  Investigation      │
-                    │  - Topology         │
-                    │  - Logs (CW)        │
-                    │  - Traces (X-Ray)   │
-                    │  - Metrics (DDB)    │
-                    │  - Root Cause       │
-                    └─────────┬──────────┘
-                              │
-                              ▼
-                   Slack #aws-incidents
-                   (findings + HITL buttons)
-```
 
 ---
 
