@@ -49,7 +49,7 @@ The system is intentionally designed with a **1 WCU DynamoDB table** to demonstr
 
 ## 🏗 Architecture
 
-![Architecture Diagram]()
+![Architecture Diagram](https://github.com/Naveen15github/AutoOps-Incident-Intelligence-with-AWS-DevOps-Agent/blob/a071db53da7322afcf5c18168cb3a009454977f8/screenshots/Gemini_Generated_Image_ib14ytib14ytib14.png)
 
 
 ---
