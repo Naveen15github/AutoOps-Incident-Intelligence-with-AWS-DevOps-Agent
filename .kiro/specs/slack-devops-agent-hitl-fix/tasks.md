@@ -1,0 +1,132 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Fault Condition** - DevOps Agent Does Not Receive Alarm Notifications
+  - **CRITICAL**: This test MUST FAIL on unfixed infrastructure - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the infrastructure when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the DevOps Agent is not receiving notifications
+  - **Scoped PBT Approach**: Scope the property to concrete failing cases - CloudWatch alarms that fire but don't trigger DevOps Agent investigation
+  - Test that when CloudWatch alarm transitions to ALARM state and publishes to SNS topic, DevOps Agent receives notification within 30 seconds and starts investigation
+  - Run `python trigger_alarm.py` to trigger `autoops-lambda-errors-dev` alarm
+  - Check SNS subscriptions: `aws sns list-subscriptions-by-topic --topic-arn <topic-arn>`
+  - Verify email received ✓, Slack message posted ✓, DevOps Agent investigation starts ✗
+  - Check DevOps Agent console for investigation activity
+  - Run test on UNFIXED infrastructure
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    - DevOps Agent subscription missing from SNS topic
+    - No investigation workflow triggered in DevOps Agent console
+    - No investigation results posted to Slack after 4 minutes
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Existing Email and Slack Notifications
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED infrastructure for existing notification channels
+  - Run `python trigger_alarm.py` and observe:
+    - Email notification received with specific format and timing
+    - AWS Chatbot posts message to #aws-incidents Slack channel
+    - Alarm state transitions correctly in CloudWatch console
+  - Write property-based tests capturing observed behavior patterns:
+    - For all alarm state changes (ALARM or OK), email notification is sent
+    - For all alarm state changes, Slack message is posted via AWS Chatbot
+    - For all alarm state changes, CloudWatch alarm state reflects correct status
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED infrastructure
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed infrastructure
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 3. Fix for DevOps Agent notification subscription
+
+  - [x] 3.1 Research DevOps Agent notification endpoint
+    - Check AWS DevOps Agent documentation for SNS integration
+    - Identify correct endpoint format for DevOps Agent Spaces
+    - Determine if endpoint is service-managed or user-provided
+    - Determine required protocol (HTTPS, Lambda, service-specific)
+    - Document endpoint discovery process
+    - _Bug_Condition: isBugCondition(input) where input.alarmState == "ALARM" AND devopsAgentSubscriptionExists(snsTopicArn) == false_
+    - _Expected_Behavior: DevOps Agent receives notification within 30 seconds and starts investigation_
+    - _Preservation: Email and Slack notifications continue working unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3, 3.4, 3.5_
+
+  - [x] 3.2 Add Terraform variable for DevOps Agent endpoint
+    - Add `devops_agent_notification_endpoint` variable to `terraform/variables.tf`
+    - Type: string
+    - Description: DevOps Agent Space notification endpoint URL
+    - Default: Empty string (user must provide after creating Agent Space)
+    - Update `terraform/terraform.tfvars.example` with placeholder
+    - _Bug_Condition: isBugCondition(input) where devopsAgentSubscriptionExists(snsTopicArn) == false_
+    - _Expected_Behavior: Endpoint can be configured via Terraform variable_
+    - _Preservation: Existing Terraform variables and configuration unchanged_
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.3 Update SNS topic policy to allow DevOps Agent subscription
+    - Modify `terraform/sns.tf` - update `aws_sns_topic_policy.alarms`
+    - Add policy statement allowing `devops-agent.amazonaws.com` service principal to subscribe
+    - Ensure policy allows SNS message delivery to DevOps Agent endpoints
+    - Verify existing policy statements for CloudWatch and email remain unchanged
+    - _Bug_Condition: isBugCondition(input) where devopsAgentSubscriptionExists(snsTopicArn) == false_
+    - _Expected_Behavior: SNS topic policy permits DevOps Agent subscription_
+    - _Preservation: CloudWatch publish permissions and existing subscriptions unchanged_
+    - _Requirements: 2.1, 2.2, 3.4_
+
+  - [x] 3.4 Create SNS subscription for DevOps Agent
+    - Add `aws_sns_topic_subscription.devops_agent` resource to `terraform/sns.tf`
+    - Protocol: Determine from research in 3.1 (likely `https` or service-specific)
+    - Endpoint: Reference `var.devops_agent_notification_endpoint`
+    - Add conditional creation: only create if endpoint variable is non-empty
+    - Consider filter policy: optional - could filter for ALARM state only
+    - _Bug_Condition: isBugCondition(input) where devopsAgentSubscriptionExists(snsTopicArn) == false_
+    - _Expected_Behavior: SNS subscription delivers alarm notifications to DevOps Agent_
+    - _Preservation: Existing email and Chatbot subscriptions continue working_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 3.1, 3.2, 3.3_
+
+  - [x] 3.5 Update documentation with SNS subscription setup
+    - Modify `docs/04-devops-agent-setup.md`
+    - Add step to retrieve DevOps Agent notification endpoint from console
+    - Add step to configure `devops_agent_notification_endpoint` in `terraform.tfvars`
+    - Add step to run `terraform apply` again after obtaining endpoint
+    - Clarify that "connecting alarms" in console is for read access only
+    - Explain that SNS subscription is required for push notifications
+    - _Bug_Condition: isBugCondition(input) where devopsAgentSubscriptionExists(snsTopicArn) == false_
+    - _Expected_Behavior: Users can follow documentation to configure DevOps Agent notifications_
+    - _Preservation: Existing documentation for email and Slack setup unchanged_
+    - _Requirements: 2.1, 2.2, 2.5_
+
+  - [x] 3.6 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - DevOps Agent Receives Alarm Notifications
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run `terraform apply` to deploy SNS subscription
+    - Run `python trigger_alarm.py` to trigger alarm
+    - Verify SNS subscription exists: `aws sns list-subscriptions-by-topic --topic-arn <topic-arn>`
+    - Verify DevOps Agent receives notification within 30 seconds
+    - Verify DevOps Agent starts investigation workflow
+    - Verify investigation results appear in Slack within 2-4 minutes
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+  - [x] 3.7 Verify preservation tests still pass
+    - **Property 2: Preservation** - Existing Email and Slack Notifications
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - Trigger alarm and verify:
+      - Email notification received with same format and timing as before
+      - AWS Chatbot posts message to #aws-incidents with same format as before
+      - Alarm state transitions correctly in CloudWatch
+    - Run alarm OK transition and verify email and Slack receive OK notifications
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Verify bug condition exploration test passes (DevOps Agent receives notifications)
+  - Verify preservation tests pass (email and Slack notifications unchanged)
+  - Run integration test: trigger alarm → verify all three channels receive notifications (email, Slack, DevOps Agent)
+  - Check DevOps Agent console for successful investigation completion
+  - Verify investigation results posted to Slack with action buttons
+  - Ensure all tests pass, ask the user if questions arise

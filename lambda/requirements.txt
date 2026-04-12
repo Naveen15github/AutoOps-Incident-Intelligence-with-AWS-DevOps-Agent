@@ -1,0 +1,7 @@
+# Python dependencies for Lambda function
+# boto3 is already included in the Lambda runtime — no need to package it
+# This file is intentionally minimal
+
+# If you add new features later, add packages here and re-run:
+# pip install -r requirements.txt -t ./package/
+# Then zip and redeploy via: terraform apply

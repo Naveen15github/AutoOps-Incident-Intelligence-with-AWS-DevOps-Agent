@@ -1,0 +1,55 @@
+# ─────────────────────────────────────────────────────────────────────
+# terraform.tfvars  — FILL IN YOUR VALUES HERE BEFORE RUNNING
+# Copy this file as-is, just replace the placeholder values
+# ─────────────────────────────────────────────────────────────────────
+
+# 1. Your AWS region (e.g. us-east-1, ap-south-1, eu-west-1)
+aws_region = "us-east-1"
+
+# 2. Environment tag (keep as "dev" for learning)
+environment = "dev"
+
+# 3. YOUR EMAIL ADDRESS — you will receive AWS alarm emails here
+#    You MUST confirm the subscription email AWS sends you after deploy
+owner_email = "naveen6662005@gmail.com"
+
+# 4. Project name prefix — no spaces, lowercase only
+project_name = "autoops"
+
+# 5. SLACK IDs (fill after completing docs/03-slack-setup.md)
+#    Leave empty "" if setting up Slack later
+slack_workspace_id = ""
+slack_channel_id   = ""
+
+# ─── Advanced (optional, defaults are fine for learning) ───────────
+
+# DynamoDB capacity — keep at 1 to trigger throttle demo easily
+dynamodb_read_capacity  = 1
+dynamodb_write_capacity = 1
+
+# Lambda settings
+lambda_memory_mb       = 256
+lambda_timeout_seconds = 30
+
+# Alarm thresholds
+alarm_error_threshold    = 5
+alarm_throttle_threshold = 1
+
+# ─── DevOps Agent Integration (optional) ────────────────────────────
+# Enable autonomous incident investigation with AWS DevOps Agent
+# Architecture: CloudWatch Alarm → EventBridge → Lambda → DevOps Agent Webhook
+#
+# Setup Instructions:
+# 1. Create DevOps Agent Space in AWS Console
+# 2. Generate generic webhook in DevOps Agent console (Capabilities tab)
+# 3. Store webhook credentials in AWS Secrets Manager:
+#    aws secretsmanager create-secret \
+#      --name /autoops/dev/devops-agent-webhook \
+#      --secret-string '{"url":"https://event-ai.us-east-1.api.aws/webhook/generic/YOUR_ID","key":"YOUR_KEY","secret":"YOUR_SECRET"}'
+# 4. Set enable_devops_agent_integration = true
+# 5. Set devops_agent_webhook_secret_arn to the secret ARN
+#
+# Leave empty to disable DevOps Agent integration
+enable_devops_agent_integration  = false
+devops_agent_webhook_secret_arn = ""
+
