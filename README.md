@@ -1,4 +1,4 @@
-# 🚨 AutoOps — Incident Intelligence with AWS DevOps Agent
+# 🚨 AutoOps-Incident Intelligence with AWS DevOps Agent
 
 <div align="center">
 
