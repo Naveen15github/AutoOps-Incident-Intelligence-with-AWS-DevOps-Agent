@@ -8,7 +8,7 @@
 ![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)
 ![Lambda](https://img.shields.io/badge/AWS_Lambda-FF9900?style=for-the-badge&logo=awslambda&logoColor=white)
 
-**An end-to-end AI-powered incident intelligence platform that automatically detects, investigates, and recommends remediation for AWS infrastructure issues — with human-in-the-loop approval before any action is taken.**
+**An end-to-end AI-powered incident intelligence platform that automatically detects, investigates, and recommends remediation for AWS infrastructure issues - with human-in-the-loop approval before any action is taken.**
 
 </div>
 
